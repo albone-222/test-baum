@@ -12,7 +12,7 @@ load_dotenv()
 class DBSettings(BaseSettings):
     """Pydantic модель для валидации настроек PostgreSQL и сборки URL адреса"""
 
-    POSTGRES_HOST: str = Field(default=os.getenv("POSTGRES_HOST", default="localhost"))
+    POSTGRES_HOST: str = Field(default=os.getenv("POSTGRES_HOST", default="postgresql"))
     POSTGRES_PORT: int = Field(default=os.getenv("POSTGRES_PORT", default=5432))
     POSTGRES_USER: str = Field(default=os.getenv("POSTGRES_USER", default="postgres"))
     POSTGRES_PASSWORD: str = Field(
@@ -38,7 +38,7 @@ class DBSettings(BaseSettings):
 class RabbitSettings(BaseSettings):
     """Pydantic модель для валидации настроек RabbitMQ и сборки URL адреса"""
 
-    RABBIT_HOST: str = Field(default=os.getenv("RABBIT_HOST", default="localhost"))
+    RABBIT_HOST: str = Field(default=os.getenv("RABBIT_HOST", default="rabbitmq"))
     RABBIT_PORT: int = Field(default=os.getenv("RABBIT_PORT", default=5672))
     RABBIT_USER: str = Field(default=os.getenv("RABBIT_USER", default="guest"))
     RABBIT_PASSWORD: str = Field(default=os.getenv("RABBIT_PASSWORD", default="guest"))
