@@ -9,6 +9,7 @@ from aio_pika import (
     connect_robust,
 )
 from aio_pika.abc import AbstractRobustConnection
+from aiormq import AMQPConnectionError
 from app.schemas import settings
 
 
@@ -22,7 +23,13 @@ class RabbitMQ:
         """Инициализация клиента и конфигурирование очереди и распределителя на сервере"""
         self.publish_queue_name = str(settings.rabbit.RABBIT_QUEUE)
         self.exchange_name = str(settings.rabbit.RABBIT_EXCHANGE)
-        self.connection = await connect(str(settings.rabbit.RABBIT_URL))
+        try:
+            self.connection = await connect(str(settings.rabbit.RABBIT_URL))
+        except AMQPConnectionError:
+            raise ConnectionError(
+                f"Проблемы с подключением к RabbitMQ по адресу {str(settings.rabbit.RABBIT_URL)}, проверьте адрес или доступность сервера"
+            )
+
         async with self.connection:
             self.channel = await self.connection.channel()
             self.publish_queue = await self.channel.declare_queue(
@@ -34,7 +41,6 @@ class RabbitMQ:
             await self.publish_queue.bind(self.exchange)
         self.response = None
         self.process_callable = process_callable
-        print("Pika connection initialized")
 
     async def consume(self, loop) -> AbstractRobustConnection:
         """Запуск в цикле функции, принимающей сообщения от RabbitMQ"""

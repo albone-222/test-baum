@@ -10,12 +10,11 @@ services:
     - POSTGRES_DB=baum
     - POSTGRES_HOST=192.168.10.25
     - POSTGRES_PORT=5432
-    - RABBIT_USER=postgres
-    - RABBIT_PASSWORD=postgres
+    - RABBIT_USER=guest
+    - RABBIT_PASSWORD=guest
     - RABBIT_HOST=192.168.10.25
-    - RABBIT_PORT=5432
+    - RABBIT_PORT=5672
     - RABBIT_QUEUE=BAUM
-    - RABBIT_VHOST=
     - RABBIT_EXCHANGE=BAUM
     build:
       context: ../
