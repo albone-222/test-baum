@@ -39,9 +39,9 @@ class RabbitSettings(BaseSettings):
     """Pydantic модель для валидации настроек RabbitMQ и сборки URL адреса"""
 
     RABBIT_HOST: str = Field(default=os.getenv("RABBIT_HOST", default="localhost"))
-    RABBIT_PORT: int = Field(default=os.getenv("RABBIT_PORT", default=5432))
-    RABBIT_USER: str = Field(default=os.getenv("RABBIT_USER", default="postgres"))
-    RABBIT_PASSWORD: str = Field(default=os.getenv("RABBIT_PASSWORD", default="12345"))
+    RABBIT_PORT: int = Field(default=os.getenv("RABBIT_PORT", default=5672))
+    RABBIT_USER: str = Field(default=os.getenv("RABBIT_USER", default="guest"))
+    RABBIT_PASSWORD: str = Field(default=os.getenv("RABBIT_PASSWORD", default="guest"))
     RABBIT_VHOST: str = Field(default=os.getenv("RABBIT_VHOST", default=""))
     RABBIT_QUEUE: str = Field(default=os.getenv("RABBIT_QUEUE", default="rabbit"))
     RABBIT_EXCHANGE: str = Field(default=os.getenv("RABBIT_EXCHANGE", default="rabbit"))

@@ -19,7 +19,7 @@ class RabbitMQ:
         asyncio.run(self.initialization(process_callable))
 
     async def initialization(self, process_callable) -> None:
-        """Инициализация клиента и конфигурирование очереди и точки обмена на сервере"""
+        """Инициализация клиента и конфигурирование очереди и распределителя на сервере"""
         self.publish_queue_name = str(settings.rabbit.RABBIT_QUEUE)
         self.exchange_name = str(settings.rabbit.RABBIT_EXCHANGE)
         self.connection = await connect(str(settings.rabbit.RABBIT_URL))
