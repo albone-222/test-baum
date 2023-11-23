@@ -1,31 +1,34 @@
+import asyncio
+
 import uvicorn
-from fastapi import FastAPI
-from app.utils import settings_rabbit, read_messages, create_tables
 from app.router import router
-from threading import Thread
+from app.utils import create_tables, rabbit
+from fastapi import FastAPI
 
 
-
-def create_app():
-    app = FastAPI(docs_url='/')
+def create_app() -> FastAPI:
+    app = FastAPI(docs_url="/")
     app.include_router(router)
 
-    @app.on_event('startup')
+    @app.on_event("startup")
     async def startup_event():
-        settings_rabbit()
-        create_tables()
-        new_thread = Thread(target=read_messages)
-        new_thread.start()
+        await create_tables()
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(rabbit.consume(loop))
+        await task
 
     return app
 
-def main():
+
+def main() -> None:
     uvicorn.run(
         f"{__name__}:create_app",
-        host='0.0.0.0', port=8888,
-        log_level='debug'
+        host="0.0.0.0",
+        port=8888,
+        log_level="debug",
+        reload=True,
     )
 
-if __name__ == '__main__':
-    main()
 
+if __name__ == "__main__":
+    main()

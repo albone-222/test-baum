@@ -26,4 +26,3 @@ repos:
     entry: pflake8
     exclude: migrations
     additional_dependencies: [pyproject-flake8]
-    #args: [--toml-config ./pyproject.toml]

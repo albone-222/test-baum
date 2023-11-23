@@ -1,75 +1,71 @@
 import asyncio
 from datetime import datetime
-from fastapi import UploadFile
-from sqlalchemy import select
-from .init_db import Base
+
+from fastapi import HTTPException, UploadFile
+from sqlalchemy import func, select
+
 from .db import SessionLocal, engine
-from .model import Lines, RabbitMQ
-from .schemas import CheckLine, settings
+from .init_db import Base
+from .model import Lines
+from .rabbit_client import RabbitMQ
+from .schemas import CheckLine, ResultCounter
 
-rabbit = RabbitMQ(str(settings.rabbit.RABBIT_URL))
-all_cnt = 0
-lim = 10
 
-def create_tables():
-    with engine.begin() as conn:
-        Base.metadata.create_all(engine)
-        
-def settings_rabbit():
-    rabbit.create_queue('BAUM')
-    rabbit.create_exchange('BAUM', 'BAUM')
+def validation_message(message: dict) -> CheckLine:
+    try:
+        validate_m = CheckLine(**message)
+    except ValueError:
+        raise HTTPException(message="Ошибка в валидации данных", status_code=400)
+    return validate_m
 
-def push_message(message):
-    rabbit.send_message(message)
 
-async def send_file(file: UploadFile):
+async def save_message(message: CheckLine) -> None:
+    async with SessionLocal() as session:
+        session.add(Lines(message))
+        await session.commit()
+
+
+async def create_tables() -> None:
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+def read_messages(message) -> None:
+    message = eval(message)
+    message = validation_message(message)
+    asyncio.create_task(save_message(message))
+
+
+async def get_data() -> list[ResultCounter]:
+    async with SessionLocal() as session:
+        query = (
+            select(
+                func.min(Lines.datetime).label("datetime"),
+                Lines.title,
+                func.avg(Lines.x_in_line).label("x_avg_count_in_line"),
+            )
+            .select_from(Lines)
+            .group_by(Lines.title)
+        )
+        res = await session.execute(query)
+        result = res.all()
+        return [ResultCounter.model_validate(r._asdict()) for r in result]
+
+
+rabbit = RabbitMQ(read_messages)
+
+
+async def send_file(file: UploadFile) -> None:
     with file.file as f:
         f = f.read().decode("utf-8").split("\n")
         title = None
         for line in f:
             if title is None:
                 title = line.strip()
-            message = {'datetime': datetime.now().isoformat(),
-                       'title': title,
-                       'text': line.strip().replace('\xa0', ' '),
-                       }
-            push_message(str(message))
+            message = {
+                "datetime": datetime.now().isoformat(),
+                "title": title,
+                "text": line.strip().replace("\xa0", " "),
+            }
+            await rabbit.send_message(message)
             await asyncio.sleep(3)
-
-def valid_and_save(rmq_messages: list):
-    if rmq_messages:
-        # for m in rmq_messages:
-            # print(Lines(m).__dict__)
-        with SessionLocal() as session:
-            session.add_all([Lines(m) for m in rmq_messages])
-            session.commit()
-            
-def read_messages():
-    rabbit.get_messages(queue_name='BAUM', func=valid_and_save)
-    # while True:
-    #     rmq_messages = rabbit.get_messages(queue_name='BAUM', count=10)
-    #     valid_and_save(rmq_messages)
-
-# def sync_async_callback():
-#     loop = asyncio.new_event_loop()
-#     asyncio.set_event_loop(loop)
-#     loop.run_until_complete(read_messages())
-#     loop.close()
-# def async_validate_and_save(channel, method_frame, header_frame, body):
-#     loop = asyncio.new_event_loop()
-#     asyncio.set_event_loop(loop)
-#     loop.run_until_complete(validate_and_save(channel, method_frame, header_frame, body))
-#     loop.close()
-
-def valid_and_save(channel, method_frame, header_frame, body):
-    body_str = eval(body.decode("utf-8"))
-    validate_body = CheckLine(**body_str)
-    # new_line = Lines(**validate_body)
-    
-    with SessionLocal() as session:
-        
-        session.add(Lines(validate_body))
-        # print(f'READ -- 123{validate_body}')
-        session.commit()
-#     channel.basic_ack(delivery_tag=method_frame.delivery_tag)
-
